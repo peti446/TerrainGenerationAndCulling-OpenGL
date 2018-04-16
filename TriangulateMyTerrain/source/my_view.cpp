@@ -101,7 +101,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 	std::vector<glm::vec3> normals;
 	std::vector<GLuint> elements;
 	
-	int N = 10;
+	int N = 3;
 	for(int x=0; x <= N; x++)
 	{
 		for(int z=0; z <= N; z++)
@@ -110,6 +110,15 @@ void MyView::windowViewWillStart(tygra::Window * window)
 			normals.push_back(glm::vec3(0,1,0));
 		}
 	}
+
+	//index 0 = row1+z
+	//index 1 = row1+z+1
+	//index 3 = row2+z
+	//index 2 = row2+z+1
+	// *------* // First * -> index 3, second * -> index 2
+	// |      |
+	// |      |
+	// *------* // First * -> index 0, Second * -> index 1
 	for (int x = 0; x < N; x++)
 	{
 		for (int z = 0; z < N; z++)
@@ -117,13 +126,72 @@ void MyView::windowViewWillStart(tygra::Window * window)
 			int row1 = x * (N + 1);
 			int row2 = (x + 1) * (N + 1);
 
-			elements.push_back(row1 + z);
-			elements.push_back(row1 + z + 1);
-			elements.push_back(row2 + z + 1);
+			if ((z % 2 != 0 && x % 2 != 0) || (x % 2 == 0 && z % 2 == 0))
+			{
+				elements.push_back(row1 + z);
+				elements.push_back(row1 + z + 1);
+				elements.push_back(row2 + z);
 
-			elements.push_back(row1 + z);
-			elements.push_back(row2 + z + 1);
-			elements.push_back(row2 + z);
+				elements.push_back(row1 + z + 1);
+				elements.push_back(row2 + z + 1);
+				elements.push_back(row2 + z);
+			}
+			else
+			{
+				elements.push_back(row1 + z);
+				elements.push_back(row1 + z + 1);
+				elements.push_back(row2 + z + 1);
+
+				elements.push_back(row1 + z);
+				elements.push_back(row2 + z + 1);
+				elements.push_back(row2 + z);
+			}
+
+			/*if (z % 2 != 0) {
+				if (x % 2 != 0)
+				{
+					elements.push_back(row1 + z);
+					elements.push_back(row1 + z + 1);
+					elements.push_back(row2 + z);
+
+					elements.push_back(row1 + z + 1);
+					elements.push_back(row2 + z + 1);
+					elements.push_back(row2 + z);
+				}
+				else
+				{
+					elements.push_back(row1 + z);
+					elements.push_back(row1 + z + 1);
+					elements.push_back(row2 + z + 1);
+
+					elements.push_back(row1 + z);
+					elements.push_back(row2 + z + 1);
+					elements.push_back(row2 + z);
+				}
+			}
+			else
+			{
+				if (x % 2 == 0)
+				{
+					elements.push_back(row1 + z);
+					elements.push_back(row1 + z + 1);
+					elements.push_back(row2 + z);
+
+					elements.push_back(row1 + z + 1);
+					elements.push_back(row2 + z + 1);
+					elements.push_back(row2 + z);
+				}
+				else
+				{
+					elements.push_back(row1 + z);
+					elements.push_back(row1 + z + 1);
+					elements.push_back(row2 + z + 1);
+
+					elements.push_back(row1 + z);
+					elements.push_back(row2 + z + 1);
+					elements.push_back(row2 + z);
+				}
+			}*/
 		}
 	}
 
