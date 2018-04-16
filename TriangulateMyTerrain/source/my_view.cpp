@@ -82,7 +82,6 @@ void MyView::windowViewWillStart(tygra::Window * window)
     const float sizeY = scene_->getTerrainSizeY();
     const float sizeZ = scene_->getTerrainSizeZ();
 
-
     const size_t number_of_patches = scene_->getTerrainPatchCount();
     // below is an example of accessing a control point from the second patch
     scene::Vector3 cp = scene_->getTerrainPatchPoint(1, 2, 3);
@@ -94,15 +93,46 @@ void MyView::windowViewWillStart(tygra::Window * window)
     // below is an example of reading the red component of pixel(x,y) as a byte [0,255]
     uint8_t displacement = *(uint8_t*)displace_image.pixel(1, 2);
 
-
+	//https://stackoverflow.com/questions/47086858/create-a-grid-in-opengl
     // below is placeholder code to create a tessellated quad
     // replace the hardcoded values with algorithms to create a tessellated quad
 
-    std::vector<glm::vec3> positions = { { 0, 0, 0 }, { sizeX, 0, 0 },
+	std::vector<glm::vec3> positions;
+	std::vector<glm::vec3> normals;
+	std::vector<GLuint> elements;
+	
+	int N = 10;
+	for(int x=0; x <= N; x++)
+	{
+		for(int z=0; z <= N; z++)
+		{
+			positions.push_back(glm::vec3(((float)z / (float)N), 0, ((float)x / (float)N)));
+			normals.push_back(glm::vec3(0,1,0));
+		}
+	}
+	for (int x = 0; x < N; x++)
+	{
+		for (int z = 0; z < N; z++)
+		{
+			int row1 = x * (N + 1);
+			int row2 = (x + 1) * (N + 1);
+
+			elements.push_back(row1 + z);
+			elements.push_back(row1 + z + 1);
+			elements.push_back(row2 + z + 1);
+
+			elements.push_back(row1 + z);
+			elements.push_back(row2 + z + 1);
+			elements.push_back(row2 + z);
+		}
+	}
+
+
+    /*std::vector<glm::vec3> positions = { { 0, 0, 0 }, { sizeX, 0, 0 },
                                          {sizeX, 0, -sizeZ}, { 0, 0, -sizeZ} };
     std::vector<glm::vec3> normals = { { 0, 1, 0 }, { 0, 1, 0 },
                                        { 0, 1, 0 }, { 0, 1, 0 } };
-    std::vector<GLuint> elements = { 0, 1, 2, 0, 2, 3 };
+    std::vector<GLuint> elements = { 0, 1, 2, 0, 2, 3 };*/
 
 
     // below is indicative code for initialising a terrain VAO.
@@ -194,7 +224,7 @@ void MyView::windowViewRender(tygra::Window * window)
     /* TODO: you are free to modify any of the drawing code below */
 
 
-    glm::mat4 world_xform = glm::mat4(1);
+    glm::mat4 world_xform = glm::translate(glm::mat4(), camera_pos - glm::vec3(0,-2,0));
     glm::mat4 view_world_xform = view_xform * world_xform;
 
     GLuint projection_xform_id = glGetUniformLocation(terrain_sp_,
