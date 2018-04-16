@@ -106,7 +106,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 	{
 		for(int z=0; z <= N; z++)
 		{
-			positions.push_back(glm::vec3(((float)z / (float)N), 0, ((float)x / (float)N)));
+			positions.push_back(glm::vec3(((float)-z / (float)N), 0, ((float)x / (float)N)));
 			normals.push_back(glm::vec3(0,1,0));
 		}
 	}
@@ -146,52 +146,6 @@ void MyView::windowViewWillStart(tygra::Window * window)
 				elements.push_back(row2 + z + 1);
 				elements.push_back(row2 + z);
 			}
-
-			/*if (z % 2 != 0) {
-				if (x % 2 != 0)
-				{
-					elements.push_back(row1 + z);
-					elements.push_back(row1 + z + 1);
-					elements.push_back(row2 + z);
-
-					elements.push_back(row1 + z + 1);
-					elements.push_back(row2 + z + 1);
-					elements.push_back(row2 + z);
-				}
-				else
-				{
-					elements.push_back(row1 + z);
-					elements.push_back(row1 + z + 1);
-					elements.push_back(row2 + z + 1);
-
-					elements.push_back(row1 + z);
-					elements.push_back(row2 + z + 1);
-					elements.push_back(row2 + z);
-				}
-			}
-			else
-			{
-				if (x % 2 == 0)
-				{
-					elements.push_back(row1 + z);
-					elements.push_back(row1 + z + 1);
-					elements.push_back(row2 + z);
-
-					elements.push_back(row1 + z + 1);
-					elements.push_back(row2 + z + 1);
-					elements.push_back(row2 + z);
-				}
-				else
-				{
-					elements.push_back(row1 + z);
-					elements.push_back(row1 + z + 1);
-					elements.push_back(row2 + z + 1);
-
-					elements.push_back(row1 + z);
-					elements.push_back(row2 + z + 1);
-					elements.push_back(row2 + z);
-				}
-			}*/
 		}
 	}
 
@@ -292,7 +246,7 @@ void MyView::windowViewRender(tygra::Window * window)
     /* TODO: you are free to modify any of the drawing code below */
 
 
-    glm::mat4 world_xform = glm::translate(glm::mat4(), camera_pos - glm::vec3(0,-2,0));
+    glm::mat4 world_xform = glm::mat4(1);
     glm::mat4 view_world_xform = view_xform * world_xform;
 
     GLuint projection_xform_id = glGetUniformLocation(terrain_sp_,
