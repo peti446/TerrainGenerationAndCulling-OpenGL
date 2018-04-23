@@ -98,56 +98,71 @@ void MyView::windowViewWillStart(tygra::Window * window)
     // replace the hardcoded values with algorithms to create a tessellated quad
 
 	std::vector<glm::vec3> positions;
+	std::vector<glm::vec2> UV;
 	std::vector<glm::vec3> normals;
 	std::vector<GLuint> elements;
 	
-	int N = 3;
-	for(int x=0; x <= N; x++)
+	//int N = 16;
+	//for(int x=0; x <= N; x++)
+	//{
+	//	for(int z=0; z <= N; z++)
+	//	{
+	//		positions.push_back(glm::vec3(((float)-z / (float)N), 0, ((float)x / (float)N)));
+	//		normals.push_back(glm::vec3(0,1,0));
+	//	}
+	//}
+
+	////index 0 = row1+z
+	////index 1 = row1+z+1
+	////index 3 = row2+z
+	////index 2 = row2+z+1
+	//// *------* // First * -> index 3, second * -> index 2
+	//// |      |
+	//// |      |
+	//// *------* // First * -> index 0, Second * -> index 1
+	//for (int x = 0; x < N; x++)
+	//{
+	//	for (int z = 0; z < N; z++)
+	//	{
+	//		int row1 = x * (N + 1);
+	//		int row2 = (x + 1) * (N + 1);
+
+	//		if ((z % 2 != 0 && x % 2 != 0) || (x % 2 == 0 && z % 2 == 0))
+	//		{
+	//			elements.push_back(row1 + z);
+	//			elements.push_back(row1 + z + 1);
+	//			elements.push_back(row2 + z);
+
+	//			elements.push_back(row1 + z + 1);
+	//			elements.push_back(row2 + z + 1);
+	//			elements.push_back(row2 + z);
+	//		}
+	//		else
+	//		{
+	//			elements.push_back(row1 + z);
+	//			elements.push_back(row1 + z + 1);
+	//			elements.push_back(row2 + z + 1);
+
+	//			elements.push_back(row1 + z);
+	//			elements.push_back(row2 + z + 1);
+	//			elements.push_back(row2 + z);
+	//		}
+	//	}
+	//}
+
+	GenerateTesselatedGrid(positions, normals, elements, UV, 100, 100, scene_->getTerrainSizeX(), scene_->getTerrainSizeZ());
+	std::vector<std::vector<glm::vec3>> bezier_patches;
+	for(int i = 0; i < number_of_patches; i++)
 	{
-		for(int z=0; z <= N; z++)
-		{
-			positions.push_back(glm::vec3(((float)-z / (float)N), 0, ((float)x / (float)N)));
-			normals.push_back(glm::vec3(0,1,0));
+		for (int u = 0; u < 4; u++) {
+			std::vector<glm::vec3> curve;
+			for (int v = 0; v < 4; v++) {
+				curve.push_back((glm::vec3&)scene_->getTerrainPatchPoint(i, u, v));
+			}
+			bezier_patches.push_back(curve);
 		}
 	}
-
-	//index 0 = row1+z
-	//index 1 = row1+z+1
-	//index 3 = row2+z
-	//index 2 = row2+z+1
-	// *------* // First * -> index 3, second * -> index 2
-	// |      |
-	// |      |
-	// *------* // First * -> index 0, Second * -> index 1
-	for (int x = 0; x < N; x++)
-	{
-		for (int z = 0; z < N; z++)
-		{
-			int row1 = x * (N + 1);
-			int row2 = (x + 1) * (N + 1);
-
-			if ((z % 2 != 0 && x % 2 != 0) || (x % 2 == 0 && z % 2 == 0))
-			{
-				elements.push_back(row1 + z);
-				elements.push_back(row1 + z + 1);
-				elements.push_back(row2 + z);
-
-				elements.push_back(row1 + z + 1);
-				elements.push_back(row2 + z + 1);
-				elements.push_back(row2 + z);
-			}
-			else
-			{
-				elements.push_back(row1 + z);
-				elements.push_back(row1 + z + 1);
-				elements.push_back(row2 + z + 1);
-
-				elements.push_back(row1 + z);
-				elements.push_back(row2 + z + 1);
-				elements.push_back(row2 + z);
-			}
-		}
-	}
+	ApplyBezierSurface(positions, normals, UV, bezier_patches);
 
 
     /*std::vector<glm::vec3> positions = { { 0, 0, 0 }, { sizeX, 0, 0 },
@@ -264,4 +279,90 @@ void MyView::windowViewRender(tygra::Window * window)
         glDrawElements(GL_TRIANGLES, terrain_mesh_.element_count,
                        GL_UNSIGNED_INT, 0);
     }
+}
+
+void MyView::GenerateTesselatedGrid(std::vector<glm::vec3>& vertecies, std::vector<glm::vec3>& normals, std::vector<unsigned int>& elementArray, std::vector<glm::vec2>& UVMap, int subU, int subV, int sizeU, int sizeV)
+{
+	int subX = sizeU / subU;
+	int subZ = sizeV / subV;
+
+
+	//For speed to use multiplication in the for loop
+	float oneOverSizeU = 1.0f / (float)sizeU;
+	float oneOverSizeV = 1.0f / (float)sizeV;
+
+	for (int x = 0; x <= abs(subX); x++)
+	{
+		for (int z = 0; z <= abs(subZ); z++)
+		{
+			vertecies.push_back(glm::vec3(x*subX, 0, z*subZ));
+			normals.push_back(glm::vec3(0, 1, 0));
+			UVMap.push_back(glm::vec2(vertecies.back().x * oneOverSizeU, vertecies.back().z * oneOverSizeV));
+		}
+	}
+
+	//index 0 = row1+z
+	//index 1 = row1+z+1
+	//index 3 = row2+z
+	//index 2 = row2+z+1
+	// *------* // First * -> index 3, second * -> index 2
+	// |      |
+	// |      |
+	// *------* // First * -> index 0, Second * -> index 1
+	for (int x = 0; x < abs(subX); x++)
+	{
+		for (int z = 0; z < abs(subZ); z++)
+		{
+			int row1 = x * (subX + 1);
+			int row2 = (x + 1) * (subZ + 1);
+
+			if ((z % 2 != 0 && x % 2 != 0) || (x % 2 == 0 && z % 2 == 0))
+			{
+				elementArray.push_back(row1 + z);
+				elementArray.push_back(row1 + z + 1);
+				elementArray.push_back(row2 + z);
+
+				elementArray.push_back(row1 + z + 1);
+				elementArray.push_back(row2 + z + 1);
+				elementArray.push_back(row2 + z);
+			}
+			else
+			{
+				elementArray.push_back(row1 + z);
+				elementArray.push_back(row1 + z + 1);
+				elementArray.push_back(row2 + z + 1);
+
+				elementArray.push_back(row1 + z);
+				elementArray.push_back(row2 + z + 1);
+				elementArray.push_back(row2 + z);
+			}
+		}
+	}
+}
+
+void MyView::ApplyBezierSurface(std::vector<glm::vec3>& vertecies, std::vector<glm::vec3>& normals, std::vector<glm::vec2> UVMap, std::vector<std::vector<glm::vec3>>& bezier_patch)
+{
+	for (int i = 0; i < vertecies.size(); i++)
+	{
+		vertecies[i] = BezierSurface(bezier_patch, UVMap[i].x, UVMap[i].y);
+	}
+}
+
+glm::vec3 MyView::BezierSurface(std::vector<std::vector<glm::vec3>>& bezier_patch, float U, float V)
+{
+	std::vector<glm::vec3> final_curve;
+	for (std::vector<glm::vec3> bezierCurvePoints : bezier_patch)
+	{
+		final_curve.push_back(BezierCurve(bezierCurvePoints, U));
+	}
+	return BezierCurve(final_curve, V);
+}
+
+glm::vec3 MyView::BezierCurve(std::vector<glm::vec3>& control_points, float t)
+{
+	//TODO: Make bezier using pascal triangle so it creates a path for an amount of different size
+	return (1-t) * (1 - t) * (1 - t) * control_points[0] +
+		    3*t * (1-t) * (1-t) * control_points[1] +
+		    3*t*t*(1-t) * control_points[2] +
+			t*t*t * control_points[3];
 }

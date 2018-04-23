@@ -29,6 +29,14 @@ private:
 
     void windowViewRender(tygra::Window * window) override;
 
+
+	void GenerateTesselatedGrid(std::vector<glm::vec3>& vertecies, std::vector<glm::vec3>& normals, std::vector<unsigned int>& elementArray, std::vector<glm::vec2>& UVMap, int subU, int subV, int sizeU, int sizeV);
+
+	void ApplyBezierSurface(std::vector<glm::vec3>& vertecies, std::vector<glm::vec3>& normals, std::vector<glm::vec2> UVMap, std::vector<std::vector<glm::vec3>>& bezier_patch);
+
+	glm::vec3 BezierSurface(std::vector<std::vector<glm::vec3>>& bezier_patch, float U, float V);
+
+	glm::vec3 BezierCurve(std::vector<glm::vec3>& control_points, float t);
 private:
 
     const scene::Context * scene_{ nullptr };
