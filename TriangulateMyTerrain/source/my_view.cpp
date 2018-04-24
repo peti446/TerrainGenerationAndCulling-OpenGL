@@ -173,7 +173,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 
 	for (int i = 0; i < MyTerrain.vertecies.size(); i++)
 	{
-		float f = FractionalBrownian(MyTerrain.vertecies[i].z, MyTerrain.vertecies[i].y, 0.5f, 4, 1);
+		float f = FractionalBrownian(MyTerrain.UVCorrd[i].x, MyTerrain.UVCorrd[i].y, 0.5f, 4, 1);
 		float k = KenPerlin(MyTerrain.UVCorrd[i].x, MyTerrain.UVCorrd[i].y);
 		MyTerrain.vertecies[i] += MyTerrain.normals[i] * f;
 	}
