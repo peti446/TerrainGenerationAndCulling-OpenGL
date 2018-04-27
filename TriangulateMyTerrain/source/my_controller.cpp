@@ -106,7 +106,7 @@ void MyController::windowControlKeyboardChanged(tygra::Window * window,
         break;
     case tygra::kWindowKeyF4:
         camera_speed_ = camera_speed_ + 20.f;
-        if (camera_speed_ > 500.f) camera_speed_ = 500.f;
+        if (camera_speed_ > 1000.f) camera_speed_ = 1000.f;
         break;
     }
 }

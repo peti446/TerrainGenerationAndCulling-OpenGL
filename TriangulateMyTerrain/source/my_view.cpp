@@ -149,23 +149,24 @@ void MyView::windowViewWillStart(tygra::Window * window)
 
 	GenerateTesselatedGrid(MyTerrain, displace_image.width(), displace_image.height(), sizeX, sizeZ);
 	std::vector<std::vector<glm::vec3>> bezier_patches;
-	for(int i = 0; i < number_of_patches; i++)
+	for (int i = 0; i < number_of_patches; i++)
 	{
-		for (int u = 0; u < 4; u++) {
+		for (int v = 0; v < 4; v++) {
 			std::vector<glm::vec3> curve;
-			for (int v = 0; v < 4; v++) {
+			for (int u = 0; u < 4; u++) {
 				curve.push_back((glm::vec3&)scene_->getTerrainPatchPoint(i, u, v));
 			}
 			bezier_patches.push_back(curve);
 		}
 	}
 
+
 	ApplyBezierSurface(MyTerrain, bezier_patches);
 
 
 	for (int i = 0; i < MyTerrain.vertecies.size(); i++)
 	{
-		MyTerrain.vertecies[i] += MyTerrain.normals[i] * (float)(*(uint8_t*)displace_image.pixel((MyTerrain.UVCorrd[i].x )* (displace_image.width()-1), (MyTerrain.UVCorrd[i].y) * (displace_image.height()-1)));
+		MyTerrain.vertecies[i] += MyTerrain.normals[i] * 300.f * ((float)(*(uint8_t*)displace_image.pixel((MyTerrain.UVCorrd[i].x )* (displace_image.width()-1), (MyTerrain.UVCorrd[i].y) * (displace_image.height()-1))))/255.f;
 	}
 
 	ComputeNormals(MyTerrain);
@@ -173,7 +174,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 
 	for (int i = 0; i < MyTerrain.vertecies.size(); i++)
 	{
-		float f = FractionalBrownian(MyTerrain.UVCorrd[i].x, MyTerrain.UVCorrd[i].y, 0.5f, 4, 1);
+		float f = FractionalBrownian(MyTerrain.vertecies[i].x, MyTerrain.vertecies[i].z, 0.5f, 16, 1);
 		float k = KenPerlin(MyTerrain.UVCorrd[i].x, MyTerrain.UVCorrd[i].y);
 		MyTerrain.vertecies[i] += MyTerrain.normals[i] * f;
 	}
@@ -291,21 +292,67 @@ void MyView::windowViewRender(tygra::Window * window)
 
 void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV, int sizeU, int sizeV)
 {
-	int subX = sizeU / subU;
-	int subZ = sizeV / subV;
 
+	int subUSize = sizeU / subU;
+	int subVSize = sizeV / subV;
+
+	float halfX = 0.5f*sizeU;
+	float halfZ = 0.5f*sizeV;
+
+	float dx = sizeU / (subU - 1);
+	float dz = sizeV / (subV - 1);
 
 	//For speed to use multiplication in the for loop
-	float oneOverSizeU = 1.0f / (float)sizeU;
-	float oneOverSizeV = 1.0f / (float)sizeV;
+	float oneOverSizeU = 1.0f / (float)(subU-1);
+	float oneOverSizeV = 1.0f / (float)(subV-1);
 
-	for (int x = 0; x <= subU; x++)
+	terrainData.vertecies.resize(subU*subV);
+	terrainData.normals.resize(subU*subV);
+	terrainData.UVCorrd.resize(subU*subV);
+	for(int z = 0; z < subV; z++)
+	{
+		int zPos = halfZ -  z * dz;
+		float v = z * oneOverSizeV;
+		for(int x = 0; x < subU; x++)
+		{
+			int xPos = -halfX + x*dx;
+			float u = x * oneOverSizeU;
+			terrainData.vertecies[z * subU +x] = (glm::vec3(xPos, 0, zPos));
+			terrainData.normals[z * subU + x] = (glm::vec3(0,1,0));
+			terrainData.UVCorrd[z * subU + x] = (glm::vec2(u,v));
+		}
+
+	}
+
+	for(int z = 0; z < subV-1; z++)
+	{
+		for (int x = 0; x < subU-1; x++)
+		{
+			int row1 = z * subU + x;
+			int row2 = (z + 1) * subU + x;
+
+			terrainData.elementArray.push_back(row2);
+			terrainData.elementArray.push_back(row1 + 1);
+			terrainData.elementArray.push_back(row2 + 1);
+
+
+			terrainData.elementArray.push_back(row1);
+			terrainData.elementArray.push_back(row1 + 1);
+			terrainData.elementArray.push_back(row2);
+		}
+	}
+
+
+
+
+
+	/*for (int x = 0; x <= subU; x++)
 	{
 		for (int z = 0; z <= subV; z++)
 		{
 			terrainData.vertecies.push_back(glm::vec3(x*subX, 0, z*subZ));
 			terrainData.normals.push_back(glm::vec3(0, 1, 0));
-			terrainData.UVCorrd.push_back(glm::vec2(terrainData.vertecies.back().x * oneOverSizeU, terrainData.vertecies.back().z * oneOverSizeV));
+			terrainData.UVCorrd.push_back(glm::vec2(terrainData.vertecies.back().z * oneOverSizeV, terrainData.vertecies.back().x * oneOverSizeU));
 		}
 	}
 
@@ -330,39 +377,57 @@ void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV
 				terrainData.elementArray.push_back(row1 + z + 1);
 				terrainData.elementArray.push_back(row2 + z);
 
+
 				terrainData.elementArray.push_back(row1 + z + 1);
 				terrainData.elementArray.push_back(row2 + z + 1);
 				terrainData.elementArray.push_back(row2 + z);
+
 			}
 			else
 			{
 				terrainData.elementArray.push_back(row1 + z);
-				terrainData.elementArray.push_back(row1 + z + 1);
+				terrainData.elementArray.push_back(row1 + z + 1);				
 				terrainData.elementArray.push_back(row2 + z + 1);
+
 
 				terrainData.elementArray.push_back(row1 + z);
 				terrainData.elementArray.push_back(row2 + z + 1);
 				terrainData.elementArray.push_back(row2 + z);
 			}
 		}
-	}
+	}*/
 }
 
 void MyView::ApplyBezierSurface(TerrainData& terrainData, std::vector<std::vector<glm::vec3>>& bezier_patch)
 {
 	for (int i = 0; i < terrainData.vertecies.size(); i++)
 	{
-		terrainData.vertecies[i] = BezierSurface(bezier_patch, terrainData.UVCorrd[i].x, terrainData.UVCorrd[i].y);
+		float u = terrainData.UVCorrd[i].x;
+		int current_bezier_batch = 1;
+		if (u < 0.5f) {
+			u = u * 2.0f;
+		}
+		else
+		{
+			u = (u - 0.5f) * 2.0f;
+			current_bezier_batch = 2;
+		}
+
+
+		terrainData.vertecies[i] = BezierSurface(bezier_patch, u, terrainData.UVCorrd[i].y, current_bezier_batch);
 	}
 	ComputeNormals(terrainData);
 }
 
-glm::vec3 MyView::BezierSurface(std::vector<std::vector<glm::vec3>>& bezier_patch, float U, float V)
+glm::vec3 MyView::BezierSurface(std::vector<std::vector<glm::vec3>>& bezier_patch, float U, float V, int startingBatch)
 {
 	std::vector<glm::vec3> final_curve;
-	for (std::vector<glm::vec3> bezierCurvePoints : bezier_patch)
+	if (startingBatch < 1)
+		startingBatch = 1;
+	for (int i = 0; i < 4; i++)
 	{
-		final_curve.push_back(BezierCurve(bezierCurvePoints, U));
+		int bezier_patch_index = i + (4 * (startingBatch - 1));
+		final_curve.push_back(BezierCurve(bezier_patch[bezier_patch_index], U));
 	}
 	return BezierCurve(final_curve, V);
 }
@@ -379,22 +444,30 @@ glm::vec3 MyView::BezierCurve(std::vector<glm::vec3>& control_points, float t)
 glm::vec3 MyView::BezierCurveTangent(std::vector<glm::vec3>& control_points, float t)
 {
 	//TODO: Make bezier using pascal triangle so it creates a path for an amount of different size
-	return  -3 * (1 - t) * (1 - t) * (control_points[1] - control_points[0]) +
+	return  3 * (1 - t) * (1 - t) * (control_points[1] - control_points[0]) +
 			6 * (1 - t) * t *  (control_points[2] - control_points[1]) + 
 			3 * t * t * (control_points[3] - control_points[2]);
 }
 
 void MyView::ComputeNormals(TerrainData & data)
 {
+	for (glm::vec3& normal : data.normals)
+		normal = glm::vec3(0, 0, 0);
+
 	for (int i = 0; i < data.elementArray.size(); i += 3)
 	{
 		glm::vec3 u = data.vertecies[data.elementArray[i + 1]] - data.vertecies[data.elementArray[i]];
 		glm::vec3 v = data.vertecies[data.elementArray[i + 2]] - data.vertecies[data.elementArray[i]];
 
-		data.normals[data.elementArray[i]] = glm::normalize(glm::cross(u,v));
-		data.normals[data.elementArray[i + 1]] = data.normals[data.elementArray[i]];
-		data.normals[data.elementArray[i + 2]] = data.normals[data.elementArray[i]];
+		glm::vec3 temp_normal = glm::normalize(glm::cross(u, v));
+
+		data.normals[data.elementArray[i]] += temp_normal;
+		data.normals[data.elementArray[i + 1]] += temp_normal;
+		data.normals[data.elementArray[i + 2]] += temp_normal;
 	}
+
+	for (glm::vec3& normal : data.normals)
+		normal = glm::normalize(normal);
 }
 
 float MyView::PerlinNoise(int x, int y)
