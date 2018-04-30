@@ -20,12 +20,20 @@ public:
 private:
 
 	//Need to declare it before the function declarations
+	struct TerrainPatch
+	{
+		GLuint elementOffset;
+		GLuint elementAmount;
+		glm::vec2 maxCoord;
+		glm::vec2 minCoord;
+	};
 	struct TerrainData
 	{
 		std::vector<glm::vec3> vertecies;
 		std::vector<glm::vec3> normals;
 		std::vector<glm::vec2> UVCorrd;
 		std::vector<GLuint> elementArray;
+		std::vector<TerrainPatch> patches;
 	};
 
 
@@ -40,7 +48,7 @@ private:
     void windowViewRender(tygra::Window * window) override;
 
 
-	void GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV, int sizeU, int sizeV);
+	void GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV, int sizeU, int sizeV, int patchSizeU, int patchSizeV);
 
 	void ApplyBezierSurface(TerrainData& terrainData, std::vector<std::vector<glm::vec3>>& bezier_patch);
 
@@ -66,6 +74,8 @@ private:
     GLuint terrain_sp_{ 0 };
 
     bool shade_normals_{ false };
+
+	TerrainData MyTerrain;
 
     struct MeshGL
     {

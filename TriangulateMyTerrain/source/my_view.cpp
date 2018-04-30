@@ -97,57 +97,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
     // below is placeholder code to create a tessellated quad
     // replace the hardcoded values with algorithms to create a tessellated quad
 
-	TerrainData MyTerrain;
-	
-	//int N = 16;
-	//for(int x=0; x <= N; x++)
-	//{
-	//	for(int z=0; z <= N; z++)
-	//	{
-	//		positions.push_back(glm::vec3(((float)-z / (float)N), 0, ((float)x / (float)N)));
-	//		normals.push_back(glm::vec3(0,1,0));
-	//	}
-	//}
-
-	////index 0 = row1+z
-	////index 1 = row1+z+1
-	////index 3 = row2+z
-	////index 2 = row2+z+1
-	//// *------* // First * -> index 3, second * -> index 2
-	//// |      |
-	//// |      |
-	//// *------* // First * -> index 0, Second * -> index 1
-	//for (int x = 0; x < N; x++)
-	//{
-	//	for (int z = 0; z < N; z++)
-	//	{
-	//		int row1 = x * (N + 1);
-	//		int row2 = (x + 1) * (N + 1);
-
-	//		if ((z % 2 != 0 && x % 2 != 0) || (x % 2 == 0 && z % 2 == 0))
-	//		{
-	//			elements.push_back(row1 + z);
-	//			elements.push_back(row1 + z + 1);
-	//			elements.push_back(row2 + z);
-
-	//			elements.push_back(row1 + z + 1);
-	//			elements.push_back(row2 + z + 1);
-	//			elements.push_back(row2 + z);
-	//		}
-	//		else
-	//		{
-	//			elements.push_back(row1 + z);
-	//			elements.push_back(row1 + z + 1);
-	//			elements.push_back(row2 + z + 1);
-
-	//			elements.push_back(row1 + z);
-	//			elements.push_back(row2 + z + 1);
-	//			elements.push_back(row2 + z);
-	//		}
-	//	}
-	//}
-
-	GenerateTesselatedGrid(MyTerrain, displace_image.width(), displace_image.height(), sizeX, sizeZ);
+	GenerateTesselatedGrid(MyTerrain, displace_image.width(), displace_image.height(), sizeX, sizeZ, 8, 8);
 	std::vector<std::vector<glm::vec3>> bezier_patches;
 	for (int i = 0; i < number_of_patches; i++)
 	{
@@ -164,7 +114,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 	ApplyBezierSurface(MyTerrain, bezier_patches);
 
 
-	for (int i = 0; i < MyTerrain.vertecies.size(); i++)
+	/*for (int i = 0; i < MyTerrain.vertecies.size(); i++)
 	{
 		MyTerrain.vertecies[i] += MyTerrain.normals[i] * 300.f * ((float)(*(uint8_t*)displace_image.pixel((MyTerrain.UVCorrd[i].x )* (displace_image.width()-1), (MyTerrain.UVCorrd[i].y) * (displace_image.height()-1))))/255.f;
 	}
@@ -179,7 +129,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 		MyTerrain.vertecies[i] += MyTerrain.normals[i] * f;
 	}
 
-	ComputeNormals(MyTerrain);
+	ComputeNormals(MyTerrain);*/
 
     // below is indicative code for initialising a terrain VAO.
 
@@ -285,12 +235,15 @@ void MyView::windowViewRender(tygra::Window * window)
 
     if (terrain_mesh_.vao) {
         glBindVertexArray(terrain_mesh_.vao);
-        glDrawElements(GL_TRIANGLES, terrain_mesh_.element_count,
-                       GL_UNSIGNED_INT, 0);
+        //glDrawElements(GL_TRIANGLES, terrain_mesh_.element_count,
+        //             GL_UNSIGNED_INT, 0);
+
+		for(TerrainPatch& p : MyTerrain.patches)
+			glDrawElementsBaseVertex(GL_TRIANGLES, p.elementAmount, GL_UNSIGNED_INT, 0, p.elementOffset);
     }
 }
 
-void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV, int sizeU, int sizeV)
+void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV, int sizeU, int sizeV, int patchSizeU, int patchSizeV)
 {
 
 	int subUSize = sizeU / subU;
@@ -317,14 +270,52 @@ void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV
 		{
 			int xPos = -halfX + x*dx;
 			float u = x * oneOverSizeU;
-			terrainData.vertecies[z * subU +x] = (glm::vec3(xPos, 0, zPos));
+			terrainData.vertecies[z * subU + x] = (glm::vec3(xPos, 0, zPos));
 			terrainData.normals[z * subU + x] = (glm::vec3(0,1,0));
 			terrainData.UVCorrd[z * subU + x] = (glm::vec2(u,v));
 		}
 
 	}
 
-	for(int z = 0; z < subV-1; z++)
+	terrainData.elementArray.reserve(patchSizeV*patchSizeU);
+	for (int i = 0; i < patchSizeV; i++)
+	{
+		for (int i2 = 0; i2 < patchSizeU; i2++)
+		{
+				int row1 = i * subU + i2;
+				int row2 = (i + 1) * subU + i2;
+
+				terrainData.elementArray.push_back(row2);
+				terrainData.elementArray.push_back(row1 + 1);
+				terrainData.elementArray.push_back(row2 + 1);
+
+
+				terrainData.elementArray.push_back(row1);
+				terrainData.elementArray.push_back(row1 + 1);
+				terrainData.elementArray.push_back(row2);
+		}
+	}
+
+	float amountPatchesU = (float)sizeU / (float)patchSizeU;
+	int fullAmountU = glm::floor(amountPatchesU);
+	float amountPatchesV = (float)sizeV / (float)patchSizeV;
+	int fullAmountV = glm::floor(amountPatchesV);
+
+	for(int z = 0; z < fullAmountV; z++)
+	{
+		for(int x = 0; x < fullAmountU; x++)
+		{
+			TerrainPatch p;
+			p.elementAmount = terrainData.elementArray.size();
+			p.elementOffset = (x * patchSizeU) + (z * patchSizeV);
+
+			terrainData.patches.push_back(p);
+		}
+	}
+
+
+	//Generate for all verecees
+	/*for(int z = 0; z < subV-1; z++)
 	{
 		for (int x = 0; x < subU-1; x++)
 		{
@@ -339,61 +330,6 @@ void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV
 			terrainData.elementArray.push_back(row1);
 			terrainData.elementArray.push_back(row1 + 1);
 			terrainData.elementArray.push_back(row2);
-		}
-	}
-
-
-
-
-
-	/*for (int x = 0; x <= subU; x++)
-	{
-		for (int z = 0; z <= subV; z++)
-		{
-			terrainData.vertecies.push_back(glm::vec3(x*subX, 0, z*subZ));
-			terrainData.normals.push_back(glm::vec3(0, 1, 0));
-			terrainData.UVCorrd.push_back(glm::vec2(terrainData.vertecies.back().z * oneOverSizeV, terrainData.vertecies.back().x * oneOverSizeU));
-		}
-	}
-
-	//index 0 = row1+z
-	//index 1 = row1+z+1
-	//index 3 = row2+z
-	//index 2 = row2+z+1
-	// *------* // First * -> index 3, second * -> index 2
-	// |      |
-	// |      |
-	// *------* // First * -> index 0, Second * -> index 1
-	for (int x = 0; x < subU; x++)
-	{
-		for (int z = 0; z < subV; z++)
-		{
-			int row1 = x * (subU + 1);
-			int row2 = (x + 1) * (subV + 1);
-
-			if ((z % 2 != 0 && x % 2 != 0) || (x % 2 == 0 && z % 2 == 0))
-			{
-				terrainData.elementArray.push_back(row1 + z);
-				terrainData.elementArray.push_back(row1 + z + 1);
-				terrainData.elementArray.push_back(row2 + z);
-
-
-				terrainData.elementArray.push_back(row1 + z + 1);
-				terrainData.elementArray.push_back(row2 + z + 1);
-				terrainData.elementArray.push_back(row2 + z);
-
-			}
-			else
-			{
-				terrainData.elementArray.push_back(row1 + z);
-				terrainData.elementArray.push_back(row1 + z + 1);				
-				terrainData.elementArray.push_back(row2 + z + 1);
-
-
-				terrainData.elementArray.push_back(row1 + z);
-				terrainData.elementArray.push_back(row2 + z + 1);
-				terrainData.elementArray.push_back(row2 + z);
-			}
 		}
 	}*/
 }
@@ -412,8 +348,6 @@ void MyView::ApplyBezierSurface(TerrainData& terrainData, std::vector<std::vecto
 			u = (u - 0.5f) * 2.0f;
 			current_bezier_batch = 2;
 		}
-
-
 		terrainData.vertecies[i] = BezierSurface(bezier_patch, u, terrainData.UVCorrd[i].y, current_bezier_batch);
 	}
 	ComputeNormals(terrainData);
