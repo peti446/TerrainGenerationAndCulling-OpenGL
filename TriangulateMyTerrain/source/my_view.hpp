@@ -104,7 +104,7 @@ private:
     MeshGL terrain_mesh_;
 
 	bool m_showPatchRenderInfo { false };
-	bool m_ExecuteInfoQuerry{false};
+	bool m_ExecuteInfoQuerry { false };
 	bool m_IsQuerryExecuting{ false };
 	GLuint m_querryID[2]{ 0, 0 };
 

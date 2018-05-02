@@ -196,10 +196,10 @@ void MyView::windowViewRender(tygra::Window * window)
 #pragma region Performance querry setup and finish
 
 	//Check if first querry is finished (Time elapsed)
-	if (m_querryID[0] != 0)
+	if(m_querryID[0] != 0) 
 	{
 		//Check if the querry is done
-		GLuint query_ready = GL_FALSE;
+		GLuint query_ready;
 		glGetQueryObjectuiv(m_querryID[0], GL_QUERY_RESULT_AVAILABLE, &query_ready);
 		if (query_ready)
 		{
@@ -210,17 +210,21 @@ void MyView::windowViewRender(tygra::Window * window)
 			std::cout << "QuerryResult:" << std::endl << "Draw time (microsecs): " << (querry_result / 1000) << std::endl;
 			//Clean up the querry
 			glDeleteQueries(1, &m_querryID[0]);
-			m_querryID[0] = 0;			//Check if the other querry is compleated to reset the booleans			if (m_querryID[1] == 0)			{				m_ExecuteInfoQuerry = false;
+			m_querryID[0] = 0;
+			//Check if the other querry is done to reset the flags
+			if(m_querryID[1] == 0)
+			{
 				m_IsQuerryExecuting = false;
+				m_ExecuteInfoQuerry = false;
 			}
 		}
 	}
 
-	//Check if second querry is finished (Generated Primitives)
+	//Check if first querry is finished (Drawn Primitives)
 	if (m_querryID[1] != 0)
 	{
 		//Check if the querry is done
-		GLuint query_ready = GL_FALSE;
+		GLuint query_ready;
 		glGetQueryObjectuiv(m_querryID[1], GL_QUERY_RESULT_AVAILABLE, &query_ready);
 		if (query_ready)
 		{
@@ -231,8 +235,12 @@ void MyView::windowViewRender(tygra::Window * window)
 			std::cout << "QuerryResult:" << std::endl << "Primitives Generated: " << querry_result << std::endl;
 			//Clean up the querry
 			glDeleteQueries(1, &m_querryID[1]);
-			m_querryID[1] = 0;			//Check if the other querry is compleated to reset the booleans			if (m_querryID[0] == 0)			{				m_ExecuteInfoQuerry = false;
+			m_querryID[1] = 0;
+			//Check if the other querry is done to reset the flags
+			if (m_querryID[0] == 0)
+			{
 				m_IsQuerryExecuting = false;
+				m_ExecuteInfoQuerry = false;
 			}
 		}
 	}
