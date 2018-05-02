@@ -59,6 +59,12 @@ private:
 
 	void ApplyBezierSurface(TerrainData& terrainData, std::vector<std::vector<glm::vec3>>& bezier_patch);
 
+	void ApplyDisplacementMap(TerrainData& terrainData, const tygra::Image& displacementMap);
+
+	void ApplyBrownianNoiseToMap(TerrainData& terrainData, int gain, int octaves);
+
+	void ApplyKenPerlin(TerrainData& terrainData);
+
 	glm::vec3 BezierSurface(std::vector<std::vector<glm::vec3>>& bezier_patch, float U, float V, int startingBatch = 1);
 
 	glm::vec3 BezierCurve(std::vector<glm::vec3>& control_points, float t);

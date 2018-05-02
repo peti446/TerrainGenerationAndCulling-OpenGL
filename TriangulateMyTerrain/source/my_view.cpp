@@ -6,6 +6,7 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
+#include <limits>
 
 MyView::MyView()
 {
@@ -112,23 +113,9 @@ void MyView::windowViewWillStart(tygra::Window * window)
 
 	ApplyBezierSurface(MyTerrain, bezier_patches);
 
+	ApplyDisplacementMap(MyTerrain, displace_image);
 
-	for (int i = 0; i < MyTerrain.vertecies.size(); i++)
-	{
-		MyTerrain.vertecies[i] += MyTerrain.normals[i] * 300.f * ((float)(*(uint8_t*)displace_image.pixel((MyTerrain.UVCorrd[i].x )* (displace_image.width()-1), (MyTerrain.UVCorrd[i].y) * (displace_image.height()-1))))/255.f;
-	}
-
-	ComputeNormals(MyTerrain);
-
-
-	for (int i = 0; i < MyTerrain.vertecies.size(); i++)
-	{
-		float f = FractionalBrownian(MyTerrain.vertecies[i].x, MyTerrain.vertecies[i].z, 0.5f, 16,  MyTerrain.sizeU / MyTerrain.subU);
-		float k = KenPerlin(MyTerrain.UVCorrd[i].x, MyTerrain.UVCorrd[i].y);
-		MyTerrain.vertecies[i] += MyTerrain.normals[i] * f;
-	}
-
-	ComputeNormals(MyTerrain);
+	ApplyBrownianNoiseToMap(MyTerrain, 1, 8);
 
 
 	SetupTerrainPatches(MyTerrain, 16, 16);
@@ -240,8 +227,6 @@ void MyView::windowViewRender(tygra::Window * window)
 
 	if (terrain_mesh_.vao) {
 		glBindVertexArray(terrain_mesh_.vao);
-		//glDrawElements(GL_TRIANGLES, terrain_mesh_.element_count,
-		//             GL_UNSIGNED_INT, 0);
 
 		int count = 0;
 		for (TerrainPatch& p : MyTerrain.patches)
@@ -296,7 +281,7 @@ void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV
 		}
 
 	}
-	terrainData.elementArray.reserve((subU-1)*(subV-1));
+	terrainData.elementArray.reserve((subU-1)*(subV-1)*6);
 	//Generate for all verecees
 	for(int z = 0; z < subV-1; z++)
 	{
@@ -305,69 +290,109 @@ void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV
 			int row1 = z * subU + x;
 			int row2 = (z + 1) * subU + x;
 
-			terrainData.elementArray.push_back(row2);
-			terrainData.elementArray.push_back(row1 + 1);
-			terrainData.elementArray.push_back(row2 + 1);
+			if ((z % 2 != 0 && x % 2 != 0) || (x % 2 == 0 && z % 2 == 0)) {
+				terrainData.elementArray.push_back(row1);
+				terrainData.elementArray.push_back(row1 + 1);
+				terrainData.elementArray.push_back(row2);
+
+				terrainData.elementArray.push_back(row2);
+				terrainData.elementArray.push_back(row1 + 1);
+				terrainData.elementArray.push_back(row2 + 1);
+			}
+			else {
+				terrainData.elementArray.push_back(row1);
+				terrainData.elementArray.push_back(row1 + 1);
+				terrainData.elementArray.push_back(row2 + 1);
 
 
-			terrainData.elementArray.push_back(row1);
-			terrainData.elementArray.push_back(row1 + 1);
-			terrainData.elementArray.push_back(row2);
+				terrainData.elementArray.push_back(row1);
+				terrainData.elementArray.push_back(row2 + 1);
+				terrainData.elementArray.push_back(row2);
+			}
 		}
 	}
 }
 
 void MyView::SetupTerrainPatches(TerrainData& terrainData, int patchSizeU, int patchSizeV)
 {
+	//Make sure that the patch size can create an exact ammount of paches based on size of the grid, so we dont end up needing to draw 1/2 of a pach
+	float tempUAmount = (float)terrainData.subU / (float)patchSizeU;
+	float tempVAmount = (float)terrainData.subV / (float)patchSizeV;
+	while (glm::ceil(tempUAmount) != tempUAmount) {
+		patchSizeU++;
+		tempUAmount = (float)terrainData.subU / (float)patchSizeU;
+	}
+	while (glm::ceil(tempVAmount) != tempVAmount) {
+		patchSizeV++;
+		tempVAmount = (float)terrainData.subV / (float)patchSizeV;
+	}
+
+	int patchAmountU = (int)tempUAmount;
+	int patchAmountV = (int)tempVAmount;
+
+
+
 	terrainData.elementArray.clear();
 	terrainData.elementArray.reserve(patchSizeU*patchSizeV);
-	for (int i = 0; i < patchSizeV; i++)
+	for (int z = 0; z < patchSizeV-1; z++)
 	{
-		for (int i2 = 0; i2 < patchSizeU; i2++)
+		for (int x = 0; x < patchSizeU-1; x++)
 		{
-			int row1 = i * terrainData.subU + i2;
-			int row2 = (i + 1) * terrainData.subU + i2;
+			int row1 = z * terrainData.subU + x;
+			int row2 = (z + 1) * terrainData.subU + x;
 
-			terrainData.elementArray.push_back(row2);
-			terrainData.elementArray.push_back(row1 + 1);
-			terrainData.elementArray.push_back(row2 + 1);
 
-			terrainData.elementArray.push_back(row1);
-			terrainData.elementArray.push_back(row1 + 1);
-			terrainData.elementArray.push_back(row2);
+			if ((z % 2 != 0 && x % 2 != 0) || (x % 2 == 0 && z % 2 == 0)) {
+				terrainData.elementArray.push_back(row1);
+				terrainData.elementArray.push_back(row1 + 1);
+				terrainData.elementArray.push_back(row2);
+
+				terrainData.elementArray.push_back(row2);
+				terrainData.elementArray.push_back(row1 + 1);
+				terrainData.elementArray.push_back(row2 + 1);
+			}
+			else {
+
+				terrainData.elementArray.push_back(row1);
+				terrainData.elementArray.push_back(row1 + 1);
+				terrainData.elementArray.push_back(row2 + 1);
+
+
+				terrainData.elementArray.push_back(row1);
+				terrainData.elementArray.push_back(row2 + 1);
+				terrainData.elementArray.push_back(row2);
+			}
 		}
 	}
 
-	float amountPatchesU = (float)terrainData.subU / (float)patchSizeU;
-	int fullAmountU = glm::floor(amountPatchesU);
-	float amountPatchesV = (float)terrainData.subV / (float)patchSizeV;
-	int fullAmountV = glm::floor(amountPatchesV);
-	terrainData.patches.resize(amountPatchesU*amountPatchesV);
-	for (int z = 0; z < fullAmountV; z++)
+	terrainData.patches.resize(patchAmountU*patchAmountV);
+	for (int z = 0; z < patchAmountV; z++)
 	{
-		for (int x = 0; x < fullAmountU; x++)
+		for (int x = 0; x < patchAmountU; x++)
 		{
 			TerrainPatch p;
 			p.elementAmount = terrainData.elementArray.size();
-			p.elementOffset = (x * (patchSizeU-1)) + (z * ((patchSizeV-1) * (patchSizeU) * fullAmountU));
+			p.elementOffset = (x * (patchSizeU-1)) + (z * ((patchSizeV-1) * ((patchSizeU) * patchAmountU)));
 
 			ViewFrustum::AAB box;
-			box.maxPoint = glm::vec3(0,0,0);
-			box.minPoint = glm::vec3(999999999, 999999999, 999999999);
+			float infinity = std::numeric_limits<float>::infinity();
+			box.maxPoint = glm::vec3(-infinity, -infinity, -infinity);
+			box.minPoint = -box.maxPoint;
 			for (int i = 0; i < terrainData.elementArray.size(); i++)
 			{
 				glm::vec3 pos = terrainData.vertecies[terrainData.elementArray[i] + p.elementOffset];
-				if (box.maxPoint.x <= pos.x)
+
+				if (box.maxPoint.x < pos.x)
 					box.maxPoint.x = pos.x;
 				else if (box.minPoint.x >= pos.x)
 					box.minPoint.x = pos.x;
 
-				if (box.maxPoint.y <= pos.y)
+				if (box.maxPoint.y < pos.y)
 					box.maxPoint.y = pos.y;
 				else if (box.minPoint.y >= pos.y)
 					box.minPoint.y = pos.y;
 
-				if (box.maxPoint.z <= pos.z)
+				if (box.maxPoint.z < pos.z)
 					box.maxPoint.z = pos.z;
 				else if (box.minPoint.z >= pos.z)
 					box.minPoint.z = pos.z;
@@ -375,7 +400,7 @@ void MyView::SetupTerrainPatches(TerrainData& terrainData, int patchSizeU, int p
 
 			p.BoundingBox = box;
 
-			terrainData.patches[z * amountPatchesU + x] = p;
+			terrainData.patches[z * patchAmountU + x] = p;
 		}
 	}
 }
@@ -396,6 +421,61 @@ void MyView::ApplyBezierSurface(TerrainData& terrainData, std::vector<std::vecto
 		}
 		terrainData.vertecies[i] = BezierSurface(bezier_patch, u, terrainData.UVCorrd[i].y, current_bezier_batch);
 	}
+	ComputeNormals(terrainData);
+}
+
+void MyView::ApplyDisplacementMap(TerrainData & terrainData, const tygra::Image& displacementMap)
+{
+	//Scalar for the dispalcement map to give it more depth
+	const float DesplacementMapScalar = 300.0f;
+
+	//Precomputed variables so we dont need to calculate it for every vertex
+	int widthCeroBased = displacementMap.width() - 1;
+	int heightCeroBased = displacementMap.height() - 1;
+	float oneOver255 = 1.0f / 255.0f;
+
+	//Apply the noise to every vertex of the terrain
+	for (int i = 0; i < terrainData.vertecies.size(); i++)
+	{
+		//Apply the pixel displacement on the normal
+		terrainData.vertecies[i] += terrainData.normals[i]
+								  * DesplacementMapScalar
+								  * ((float)(*(uint8_t*)displacementMap.pixel(terrainData.UVCorrd[i].x * widthCeroBased, terrainData.UVCorrd[i].y * heightCeroBased)))
+								  * oneOver255;
+	}
+
+	//Recaluclate the normals as we just changed the terrain
+	ComputeNormals(terrainData);
+}
+
+void MyView::ApplyBrownianNoiseToMap(TerrainData & terrainData, int gain, int octaves)
+{
+	//Scalar to apply to the 0-1 value from the noise so noticeable in the world
+	const float NoiseScalar = 10.0;
+	for (int i = 0; i < terrainData.vertecies.size(); i++)
+	{
+		float noise = FractionalBrownian(terrainData.vertecies[i].x, terrainData.vertecies[i].z, gain, octaves, terrainData.sizeU / terrainData.subU);
+		terrainData.vertecies[i] += terrainData.normals[i] * (noise * NoiseScalar);
+	}
+	//Recalculate the normals as we changed the positions of the the vertecies of the terrain
+	ComputeNormals(terrainData);
+}
+
+void MyView::ApplyKenPerlin(TerrainData & terrainData)
+{
+	//Scalar to apply to the 0-1 value from the noise so noticeable in the world
+	const float NoiseScalar = 10.0;
+
+	//Apply the noise to every vertex of the terrain
+	for (int i = 0; i < terrainData.vertecies.size(); i++)
+	{
+		//Make KenPerlin noice to the range 0-1 as by default it returns it from -1 to 1;
+		float f = 0.5 + 0.5 * KenPerlin(terrainData.vertecies[i].x, terrainData.vertecies[i].z);
+		//Multiply the noise value by the scalar and then the result by the normal and add it to the vertex position
+		terrainData.vertecies[i] += terrainData.normals[i] * (f * NoiseScalar);
+	}
+
+	//Recalculate the normals as we changed the positions of the the vertecies of the terrain
 	ComputeNormals(terrainData);
 }
 

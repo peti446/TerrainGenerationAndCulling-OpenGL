@@ -29,20 +29,17 @@ public:
 		const glm::vec3& getNegativeVertex(glm::vec3 normal) const
 		{
 			glm::vec3 negative = maxPoint;
-			if (normal.x >= 0)
+			if (normal.x <= 0)
 				negative.x = minPoint.x;
-			if (normal.y >= 0)
+			if (normal.y <= 0)
 				negative.y = minPoint.y;
-			if (normal.z >= 0)
+			if (normal.z <= 0)
 				negative.z = minPoint.z;
 
 			return negative;
 		}
 	};
 
-	//https://stackoverflow.com/questions/13665932/calculating-the-viewing-frustum-in-a-3d-space
-	//http://davidlively.com/programming/graphics/frustum-calculation-and-culling-hopefully-demystified/
-	//http://www.lighthouse3d.com/tutorials/view-frustum-culling/
 	ViewFrustum();
 	~ViewFrustum();
 
