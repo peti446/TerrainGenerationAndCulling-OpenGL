@@ -19,6 +19,9 @@ public:
 
     void toggleShading();
 
+	void ToggleDebugDrawCalls();
+
+	void ExecuteAProfileQuerry();
 
 private:
 
@@ -42,7 +45,6 @@ private:
 		int sizeV;
 	};
 
-
     void windowViewWillStart(tygra::Window * window) override;
 
     void windowViewDidReset(tygra::Window * window,
@@ -61,7 +63,7 @@ private:
 
 	void ApplyDisplacementMap(TerrainData& terrainData, const tygra::Image& displacementMap);
 
-	void ApplyBrownianNoiseToMap(TerrainData& terrainData, int gain, int octaves, float lacunarity);
+	void ApplyBrownianNoiseToMap(TerrainData& terrainData, float gain, int octaves, float lacunarity);
 
 	void ApplyKenPerlin(TerrainData& terrainData);
 
@@ -100,6 +102,9 @@ private:
         int element_count{ 0 };
     };
     MeshGL terrain_mesh_;
+
+	bool m_showPatchRenderInfo { false };
+	bool m_ExecuteQuerryInfo{false};
 
     enum
     {

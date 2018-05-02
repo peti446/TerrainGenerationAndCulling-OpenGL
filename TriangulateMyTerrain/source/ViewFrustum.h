@@ -63,5 +63,15 @@ private:
 	float distance(const glm::vec4& plane, const glm::vec3& point) const;
 
 	std::vector<glm::vec4> m_planes;
+
+	enum ePlanes
+	{
+		LEFT,
+		RIGHT,
+		TOP,
+		BOTTOM,
+		FAR,
+		NEAR
+	};
 };
 

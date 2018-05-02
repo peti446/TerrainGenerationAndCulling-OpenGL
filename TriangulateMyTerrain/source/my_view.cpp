@@ -24,6 +24,19 @@ void MyView::toggleShading()
     shade_normals_ = !shade_normals_;
 }
 
+void MyView::ToggleDebugDrawCalls()
+{
+	m_showPatchRenderInfo = !m_showPatchRenderInfo;
+}
+
+void MyView::ExecuteAProfileQuerry()
+{
+	if (m_ExecuteQuerryInfo)
+		return;
+
+	m_ExecuteQuerryInfo = true;
+}
+
 void MyView::windowViewWillStart(tygra::Window * window)
 {
     assert(scene_ != nullptr);
@@ -113,7 +126,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 	//We apply then the dislacement map upon the terrain in its new state (with the bezier applied to it) , afterwards we compute the normals
 	ApplyDisplacementMap(m_terrainData, displace_image);
 	//Then we apply some noise to it (We are using here Brownian noise but I got the KenPerlin function too that could be used), , afterwards we compute the normals
-	ApplyBrownianNoiseToMap(m_terrainData, 1, 8, 2.0f);
+	ApplyBrownianNoiseToMap(m_terrainData, 0.5f, 8, 2.0f);
 	//The last step is splitting up the terrain in patches, we are using 16 by 16 paches in this instance
 	SetupTerrainPatches(m_terrainData, 16, 16);
 #pragma endregion
@@ -249,8 +262,11 @@ void MyView::windowViewRender(tygra::Window * window)
 			}
 		}
 
-		//Debug MSG to show how many paches have been drawn
-		std::cout << "Paches Rendering: " << count << "out of " << m_terrainData.patches.size() << std::endl;
+		if(m_showPatchRenderInfo)
+		{
+			//Debug MSG to show how many paches have been drawn
+			std::cout << "Paches Rendering: " << count << " out of " << m_terrainData.patches.size() << std::endl;
+		}
     }
 #pragma endregion
 }
@@ -433,19 +449,19 @@ void MyView::SetupTerrainPatches(TerrainData& terrainData, int patchSizeU, int p
 				//Check if current X pos is the new max or min of the Axis aligned bounding box
 				if (box.maxPoint.x < pos.x)
 					box.maxPoint.x = pos.x;
-				if (box.minPoint.x >= pos.x)
+				else if (box.minPoint.x > pos.x)
 					box.minPoint.x = pos.x;
 
 				//Check if current Y pos is the new max or min of the Axis aligned bounding box
 				if (box.maxPoint.y < pos.y)
 					box.maxPoint.y = pos.y;
-				if (box.minPoint.y >= pos.y)
+				else if (box.minPoint.y > pos.y)
 					box.minPoint.y = pos.y;
 
 				//Check if current Z pos is the new max or min of the Axis aligned bounding box
 				if (box.maxPoint.z < pos.z)
 					box.maxPoint.z = pos.z;
-				if (box.minPoint.z >= pos.z)
+				else if (box.minPoint.z > pos.z)
 					box.minPoint.z = pos.z;
 			}
 
@@ -506,14 +522,13 @@ void MyView::ApplyDisplacementMap(TerrainData& terrainData, const tygra::Image& 
 	ComputeNormals(terrainData);
 }
 
-void MyView::ApplyBrownianNoiseToMap(TerrainData & terrainData, int gain, int octaves, float lacunarity)
+void MyView::ApplyBrownianNoiseToMap(TerrainData & terrainData, float gain, int octaves, float lacunarity)
 {
-	//Scalar to apply to the 0-1 value from the noise so noticeable in the world
-	const float NoiseScalar = 10.0;
+	const float noiseScalar = 15.0f;
 	for (int i = 0; i < terrainData.vertecies.size(); i++)
 	{
 		float noise = FractionalBrownian(terrainData.vertecies[i].x, terrainData.vertecies[i].z, gain, octaves, terrainData.sizeU / terrainData.subU, lacunarity);
-		terrainData.vertecies[i] += terrainData.normals[i] * (noise * NoiseScalar);
+		terrainData.vertecies[i] += terrainData.normals[i] * (noiseScalar * noise);
 	}
 	//Recalculate the normals as we changed the positions of the the vertecies of the terrain
 	ComputeNormals(terrainData);
@@ -522,7 +537,7 @@ void MyView::ApplyBrownianNoiseToMap(TerrainData & terrainData, int gain, int oc
 void MyView::ApplyKenPerlin(TerrainData & terrainData)
 {
 	//Scalar to apply to the 0-1 value from the noise so noticeable in the world
-	const float NoiseScalar = 10.0;
+	const float NoiseScalar = 15.0;
 
 	//Apply the noise to every vertex of the terrain
 	for (int i = 0; i < terrainData.vertecies.size(); i++)
@@ -611,10 +626,10 @@ float MyView::FractionalBrownian(float x, float y, float gain, int octaves, int 
 	float amplitude = gain;
 
 	//Loop trought each octave
-	for (int i =0; i < octaves; i++)
+	for (int i = 0; i < octaves; i++)
 	{
 		//Add the noise to the total
-		total += PerlinNoise((int)x * frequency, (int)y * frequency) * amplitude;
+		total += PerlinNoise((int)(x * frequency), (int)(y * frequency)) * amplitude;
 		//Decrease frequency
 		frequency *= lacunarity;
 		//Increase amplitude

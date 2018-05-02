@@ -20,6 +20,8 @@ void MyController::windowControlWillStart(tygra::Window * window)
     std::cout << "  F2: Toggle shading mode" << std::endl;
     std::cout << "  F3: Reduce camera movement speed" << std::endl;
     std::cout << "  F4: Increase camera movement speed" << std::endl;
+	std::cout << "	F5: Do a performance querry" << std::endl;
+	std::cout << "	F6: Toggle Paches rendering information" << std::endl;
 }
 
 void MyController::windowControlDidStop(tygra::Window * window)
@@ -108,6 +110,12 @@ void MyController::windowControlKeyboardChanged(tygra::Window * window,
         camera_speed_ = camera_speed_ + 20.f;
         if (camera_speed_ > 1000.f) camera_speed_ = 1000.f;
         break;
+	case tygra::kWindowKeyF5:
+		view_->ToggleDebugDrawCalls();
+		break;
+	case tygra::kWindowKeyF6:
+		view_->ExecuteAProfileQuerry();
+		break;
     }
 }
 

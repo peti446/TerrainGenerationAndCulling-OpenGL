@@ -1,7 +1,7 @@
 #include "ViewFrustum.h"
 
 
-ViewFrustum::ViewFrustum()
+ViewFrustum::ViewFrustum() : m_planes(6)
 {
 }
 
@@ -15,22 +15,21 @@ void ViewFrustum::createFrustum(glm::mat4 ProjectViewMatrix)
 	//Transposes the project view matrix to extract the planes information
 	ProjectViewMatrix = glm::transpose(ProjectViewMatrix);
 
-	//Alocate memory for planes vector
-	m_planes.reserve(6);
+
 	//Left plane
-	m_planes.push_back(ProjectViewMatrix[3] + ProjectViewMatrix[0]);
+	m_planes[ePlanes::LEFT] = ProjectViewMatrix[3] + ProjectViewMatrix[0];
 	//Right plane
-	m_planes.push_back(ProjectViewMatrix[3] - ProjectViewMatrix[0]);
+	m_planes[ePlanes::RIGHT] = ProjectViewMatrix[3] - ProjectViewMatrix[0];
 
 	//Top plane
-	m_planes.push_back(ProjectViewMatrix[3] - ProjectViewMatrix[1]);
+	m_planes[ePlanes::TOP] = ProjectViewMatrix[3] - ProjectViewMatrix[1];
 	//Bottom plae
-	m_planes.push_back(ProjectViewMatrix[3] + ProjectViewMatrix[1]);
+	m_planes[ePlanes::BOTTOM] = ProjectViewMatrix[3] + ProjectViewMatrix[1];
 
 	//Near plane
-	m_planes.push_back(ProjectViewMatrix[3] + ProjectViewMatrix[2]);
+	m_planes[ePlanes::NEAR] = ProjectViewMatrix[3] + ProjectViewMatrix[2];
 	//Far plane
-	m_planes.push_back(ProjectViewMatrix[3] - ProjectViewMatrix[2]);
+	m_planes[ePlanes::FAR] = ProjectViewMatrix[3] - ProjectViewMatrix[2];
 }
 
 float ViewFrustum::distance(const glm::vec4& plane, const glm::vec3& point) const
