@@ -93,11 +93,10 @@ void MyView::windowViewWillStart(tygra::Window * window)
     // below is an example of reading the red component of pixel(x,y) as a byte [0,255]
     uint8_t displacement = *(uint8_t*)displace_image.pixel(1, 2);
 
-	//https://stackoverflow.com/questions/47086858/create-a-grid-in-opengl
     // below is placeholder code to create a tessellated quad
     // replace the hardcoded values with algorithms to create a tessellated quad
 
-	GenerateTesselatedGrid(MyTerrain, displace_image.width(), displace_image.height(), sizeX, sizeZ, 8, 8);
+	GenerateTesselatedGrid(MyTerrain, displace_image.width(), displace_image.height(), sizeX, sizeZ);
 	std::vector<std::vector<glm::vec3>> bezier_patches;
 	for (int i = 0; i < number_of_patches; i++)
 	{
@@ -114,7 +113,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 	ApplyBezierSurface(MyTerrain, bezier_patches);
 
 
-	/*for (int i = 0; i < MyTerrain.vertecies.size(); i++)
+	for (int i = 0; i < MyTerrain.vertecies.size(); i++)
 	{
 		MyTerrain.vertecies[i] += MyTerrain.normals[i] * 300.f * ((float)(*(uint8_t*)displace_image.pixel((MyTerrain.UVCorrd[i].x )* (displace_image.width()-1), (MyTerrain.UVCorrd[i].y) * (displace_image.height()-1))))/255.f;
 	}
@@ -124,12 +123,15 @@ void MyView::windowViewWillStart(tygra::Window * window)
 
 	for (int i = 0; i < MyTerrain.vertecies.size(); i++)
 	{
-		float f = FractionalBrownian(MyTerrain.vertecies[i].x, MyTerrain.vertecies[i].z, 0.5f, 16, 1);
+		float f = FractionalBrownian(MyTerrain.vertecies[i].x, MyTerrain.vertecies[i].z, 0.5f, 16,  MyTerrain.sizeU / MyTerrain.subU);
 		float k = KenPerlin(MyTerrain.UVCorrd[i].x, MyTerrain.UVCorrd[i].y);
 		MyTerrain.vertecies[i] += MyTerrain.normals[i] * f;
 	}
 
-	ComputeNormals(MyTerrain);*/
+	ComputeNormals(MyTerrain);
+
+
+	SetupTerrainPatches(MyTerrain, 16, 16);
 
     // below is indicative code for initialising a terrain VAO.
 
@@ -233,18 +235,36 @@ void MyView::windowViewRender(tygra::Window * window)
     glUniformMatrix4fv(view_world_xform_id, 1, GL_FALSE,
                        glm::value_ptr(view_world_xform));
 
-    if (terrain_mesh_.vao) {
-        glBindVertexArray(terrain_mesh_.vao);
-        //glDrawElements(GL_TRIANGLES, terrain_mesh_.element_count,
-        //             GL_UNSIGNED_INT, 0);
+	ViewFrustum f;
+	f.createFrustum(projection_xform * view_xform);
 
-		for(TerrainPatch& p : MyTerrain.patches)
-			glDrawElementsBaseVertex(GL_TRIANGLES, p.elementAmount, GL_UNSIGNED_INT, 0, p.elementOffset);
+	if (terrain_mesh_.vao) {
+		glBindVertexArray(terrain_mesh_.vao);
+		//glDrawElements(GL_TRIANGLES, terrain_mesh_.element_count,
+		//             GL_UNSIGNED_INT, 0);
+
+		int count = 0;
+		for (TerrainPatch& p : MyTerrain.patches)
+		{
+			if(f.inFrustum(p.BoundingBox))
+			{
+				glDrawElementsBaseVertex(GL_TRIANGLES, p.elementAmount, GL_UNSIGNED_INT, 0, p.elementOffset);
+				count++;
+			}
+		}
+
+		std::cout << "Paches Rendering: " << count << "out of " << MyTerrain.patches.size() << std::endl;
     }
 }
 
-void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV, int sizeU, int sizeV, int patchSizeU, int patchSizeV)
+void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV, int sizeU, int sizeV)
 {
+
+	//Set Terrain data to use later in the reindex
+	terrainData.subU = subU;
+	terrainData.subV = subV;
+	terrainData.sizeU = sizeU;
+	terrainData.sizeV = sizeV;
 
 	int subUSize = sizeU / subU;
 	int subVSize = sizeV / subV;
@@ -276,48 +296,11 @@ void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV
 		}
 
 	}
-
-	terrainData.elementArray.reserve(patchSizeV*patchSizeU);
-	for (int i = 0; i < patchSizeV; i++)
-	{
-		for (int i2 = 0; i2 < patchSizeU; i2++)
-		{
-				int row1 = i * subU + i2;
-				int row2 = (i + 1) * subU + i2;
-
-				terrainData.elementArray.push_back(row2);
-				terrainData.elementArray.push_back(row1 + 1);
-				terrainData.elementArray.push_back(row2 + 1);
-
-
-				terrainData.elementArray.push_back(row1);
-				terrainData.elementArray.push_back(row1 + 1);
-				terrainData.elementArray.push_back(row2);
-		}
-	}
-
-	float amountPatchesU = (float)sizeU / (float)patchSizeU;
-	int fullAmountU = glm::floor(amountPatchesU);
-	float amountPatchesV = (float)sizeV / (float)patchSizeV;
-	int fullAmountV = glm::floor(amountPatchesV);
-
-	for(int z = 0; z < fullAmountV; z++)
-	{
-		for(int x = 0; x < fullAmountU; x++)
-		{
-			TerrainPatch p;
-			p.elementAmount = terrainData.elementArray.size();
-			p.elementOffset = (x * patchSizeU) + (z * patchSizeV);
-
-			terrainData.patches.push_back(p);
-		}
-	}
-
-
+	terrainData.elementArray.reserve((subU-1)*(subV-1));
 	//Generate for all verecees
-	/*for(int z = 0; z < subV-1; z++)
+	for(int z = 0; z < subV-1; z++)
 	{
-		for (int x = 0; x < subU-1; x++)
+		for (int x = 0; x < subU - 1; x++)
 		{
 			int row1 = z * subU + x;
 			int row2 = (z + 1) * subU + x;
@@ -331,7 +314,70 @@ void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV
 			terrainData.elementArray.push_back(row1 + 1);
 			terrainData.elementArray.push_back(row2);
 		}
-	}*/
+	}
+}
+
+void MyView::SetupTerrainPatches(TerrainData& terrainData, int patchSizeU, int patchSizeV)
+{
+	terrainData.elementArray.clear();
+	terrainData.elementArray.reserve(patchSizeU*patchSizeV);
+	for (int i = 0; i < patchSizeV; i++)
+	{
+		for (int i2 = 0; i2 < patchSizeU; i2++)
+		{
+			int row1 = i * terrainData.subU + i2;
+			int row2 = (i + 1) * terrainData.subU + i2;
+
+			terrainData.elementArray.push_back(row2);
+			terrainData.elementArray.push_back(row1 + 1);
+			terrainData.elementArray.push_back(row2 + 1);
+
+			terrainData.elementArray.push_back(row1);
+			terrainData.elementArray.push_back(row1 + 1);
+			terrainData.elementArray.push_back(row2);
+		}
+	}
+
+	float amountPatchesU = (float)terrainData.subU / (float)patchSizeU;
+	int fullAmountU = glm::floor(amountPatchesU);
+	float amountPatchesV = (float)terrainData.subV / (float)patchSizeV;
+	int fullAmountV = glm::floor(amountPatchesV);
+	terrainData.patches.resize(amountPatchesU*amountPatchesV);
+	for (int z = 0; z < fullAmountV; z++)
+	{
+		for (int x = 0; x < fullAmountU; x++)
+		{
+			TerrainPatch p;
+			p.elementAmount = terrainData.elementArray.size();
+			p.elementOffset = (x * (patchSizeU-1)) + (z * ((patchSizeV-1) * (patchSizeU) * fullAmountU));
+
+			ViewFrustum::AAB box;
+			box.maxPoint = glm::vec3(0,0,0);
+			box.minPoint = glm::vec3(999999999, 999999999, 999999999);
+			for (int i = 0; i < terrainData.elementArray.size(); i++)
+			{
+				glm::vec3 pos = terrainData.vertecies[terrainData.elementArray[i] + p.elementOffset];
+				if (box.maxPoint.x <= pos.x)
+					box.maxPoint.x = pos.x;
+				else if (box.minPoint.x >= pos.x)
+					box.minPoint.x = pos.x;
+
+				if (box.maxPoint.y <= pos.y)
+					box.maxPoint.y = pos.y;
+				else if (box.minPoint.y >= pos.y)
+					box.minPoint.y = pos.y;
+
+				if (box.maxPoint.z <= pos.z)
+					box.maxPoint.z = pos.z;
+				else if (box.minPoint.z >= pos.z)
+					box.minPoint.z = pos.z;
+			}
+
+			p.BoundingBox = box;
+
+			terrainData.patches[z * amountPatchesU + x] = p;
+		}
+	}
 }
 
 void MyView::ApplyBezierSurface(TerrainData& terrainData, std::vector<std::vector<glm::vec3>>& bezier_patch)

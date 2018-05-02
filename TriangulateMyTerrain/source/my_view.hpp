@@ -4,6 +4,7 @@
 #include <tygra/WindowViewDelegate.hpp>
 #include <tgl/tgl.h>
 #include <glm/glm.hpp>
+#include "ViewFrustum.h"
 
 class MyView : public tygra::WindowViewDelegate
 {
@@ -17,6 +18,7 @@ public:
 
     void toggleShading();
 
+
 private:
 
 	//Need to declare it before the function declarations
@@ -24,8 +26,7 @@ private:
 	{
 		GLuint elementOffset;
 		GLuint elementAmount;
-		glm::vec2 maxCoord;
-		glm::vec2 minCoord;
+		ViewFrustum::AAB BoundingBox;
 	};
 	struct TerrainData
 	{
@@ -34,6 +35,10 @@ private:
 		std::vector<glm::vec2> UVCorrd;
 		std::vector<GLuint> elementArray;
 		std::vector<TerrainPatch> patches;
+		int subU;
+		int subV;
+		int sizeU;
+		int sizeV;
 	};
 
 
@@ -48,7 +53,9 @@ private:
     void windowViewRender(tygra::Window * window) override;
 
 
-	void GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV, int sizeU, int sizeV, int patchSizeU, int patchSizeV);
+	void GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV, int sizeU, int sizeV);
+
+	void SetupTerrainPatches(TerrainData& terrainData, int sizeU, int sizeV);
 
 	void ApplyBezierSurface(TerrainData& terrainData, std::vector<std::vector<glm::vec3>>& bezier_patch);
 

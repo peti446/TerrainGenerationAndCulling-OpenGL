@@ -26,7 +26,7 @@
     <ClCompile Include="source\my_view.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ViewFrustum.cpp">
+    <ClCompile Include="source\ViewFrustum.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -37,7 +37,7 @@
     <ClInclude Include="source\my_view.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ViewFrustum.h">
+    <ClInclude Include="source\ViewFrustum.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
