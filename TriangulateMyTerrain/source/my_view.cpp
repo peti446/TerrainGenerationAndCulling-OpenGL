@@ -31,10 +31,11 @@ void MyView::ToggleDebugDrawCalls()
 
 void MyView::ExecuteAProfileQuerry()
 {
-	if (m_ExecuteQuerryInfo)
+	if (m_ExecuteInfoQuerry)
 		return;
 
-	m_ExecuteQuerryInfo = true;
+	std::cout << "Executing a Performance Querry, the information will be displayed once its done" << std::endl;
+	m_ExecuteInfoQuerry = true;
 }
 
 void MyView::windowViewWillStart(tygra::Window * window)
@@ -192,6 +193,35 @@ void MyView::windowViewRender(tygra::Window * window)
 {
     assert(scene_ != nullptr);
 
+#pragma region Performance querry setup and finish
+
+	if (m_querryID != 0)
+	{
+		GLuint query_ready = GL_FALSE;
+		glGetQueryObjectuiv(m_querryID, GL_QUERY_RESULT_AVAILABLE, &query_ready);
+		if (query_ready)
+		{
+			GLuint querry_result;
+			glGetQueryObjectuiv(m_querryID, GL_QUERY_RESULT, &querry_result);
+			std::cout << "QuerryResult:" << std::endl << "Draw time (microsecs): " << (querry_result / 1000) << std::endl;
+			// delete the used query (although they can be used more than once)
+			glDeleteQueries(1, &m_querryID);
+			m_querryID = 0;			m_ExecuteInfoQuerry = false;
+			m_IsQuerryExecuting = false;
+		}
+	}
+
+	//Do the user want to perform a querry
+	bool perform_querry = m_ExecuteInfoQuerry && !m_IsQuerryExecuting;
+	if(perform_querry)
+	{
+		glGenQueries(1, &m_querryID);
+		m_IsQuerryExecuting = true;
+		//Execute a time elaped querry if the users wants to and no querry is been executed
+		glBeginQuery(GL_TIME_ELAPSED, m_querryID);
+	}
+#pragma endregion
+
 	//Set up aspect ratio
     GLint viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
@@ -268,6 +298,13 @@ void MyView::windowViewRender(tygra::Window * window)
 			std::cout << "Paches Rendering: " << count << " out of " << m_terrainData.patches.size() << std::endl;
 		}
     }
+#pragma endregion
+
+
+#pragma region EndQuerry
+	if (perform_querry) {
+		glEndQuery(GL_TIME_ELAPSED);
+	}
 #pragma endregion
 }
 
