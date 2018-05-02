@@ -195,19 +195,45 @@ void MyView::windowViewRender(tygra::Window * window)
 
 #pragma region Performance querry setup and finish
 
-	if (m_querryID != 0)
+	//Check if first querry is finished (Time elapsed)
+	if (m_querryID[0] != 0)
 	{
+		//Check if the querry is done
 		GLuint query_ready = GL_FALSE;
-		glGetQueryObjectuiv(m_querryID, GL_QUERY_RESULT_AVAILABLE, &query_ready);
+		glGetQueryObjectuiv(m_querryID[0], GL_QUERY_RESULT_AVAILABLE, &query_ready);
 		if (query_ready)
 		{
+			//Get the result from the querry
 			GLuint querry_result;
-			glGetQueryObjectuiv(m_querryID, GL_QUERY_RESULT, &querry_result);
+			glGetQueryObjectuiv(m_querryID[0], GL_QUERY_RESULT, &querry_result);
+			//Output the information
 			std::cout << "QuerryResult:" << std::endl << "Draw time (microsecs): " << (querry_result / 1000) << std::endl;
-			// delete the used query (although they can be used more than once)
-			glDeleteQueries(1, &m_querryID);
-			m_querryID = 0;			m_ExecuteInfoQuerry = false;
-			m_IsQuerryExecuting = false;
+			//Clean up the querry
+			glDeleteQueries(1, &m_querryID[0]);
+			m_querryID[0] = 0;			//Check if the other querry is compleated to reset the booleans			if (m_querryID[1] == 0)			{				m_ExecuteInfoQuerry = false;
+				m_IsQuerryExecuting = false;
+			}
+		}
+	}
+
+	//Check if second querry is finished (Generated Primitives)
+	if (m_querryID[1] != 0)
+	{
+		//Check if the querry is done
+		GLuint query_ready = GL_FALSE;
+		glGetQueryObjectuiv(m_querryID[1], GL_QUERY_RESULT_AVAILABLE, &query_ready);
+		if (query_ready)
+		{
+			//Get the result from the querry
+			GLuint querry_result;
+			glGetQueryObjectuiv(m_querryID[1], GL_QUERY_RESULT, &querry_result);
+			//Output the information
+			std::cout << "QuerryResult:" << std::endl << "Primitives Generated: " << querry_result << std::endl;
+			//Clean up the querry
+			glDeleteQueries(1, &m_querryID[1]);
+			m_querryID[1] = 0;			//Check if the other querry is compleated to reset the booleans			if (m_querryID[0] == 0)			{				m_ExecuteInfoQuerry = false;
+				m_IsQuerryExecuting = false;
+			}
 		}
 	}
 
@@ -215,10 +241,15 @@ void MyView::windowViewRender(tygra::Window * window)
 	bool perform_querry = m_ExecuteInfoQuerry && !m_IsQuerryExecuting;
 	if(perform_querry)
 	{
-		glGenQueries(1, &m_querryID);
+		//Generate querries ID for both querrries
+		glGenQueries(1, &m_querryID[0]);
+		glGenQueries(1, &m_querryID[1]);
 		m_IsQuerryExecuting = true;
+
+		//Execute a Generated primitives querry
+		glBeginQuery(GL_PRIMITIVES_GENERATED, m_querryID[1]);
 		//Execute a time elaped querry if the users wants to and no querry is been executed
-		glBeginQuery(GL_TIME_ELAPSED, m_querryID);
+		glBeginQuery(GL_TIME_ELAPSED, m_querryID[0]);
 	}
 #pragma endregion
 
@@ -300,10 +331,11 @@ void MyView::windowViewRender(tygra::Window * window)
     }
 #pragma endregion
 
-
 #pragma region EndQuerry
+	//Stop all the querries
 	if (perform_querry) {
 		glEndQuery(GL_TIME_ELAPSED);
+		glEndQuery(GL_PRIMITIVES_GENERATED);
 	}
 #pragma endregion
 }
