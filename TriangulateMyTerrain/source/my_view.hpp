@@ -3,6 +3,7 @@
 #include <scene/context.hpp>
 #include <tygra/WindowViewDelegate.hpp>
 #include <tgl/tgl.h>
+#include <tygra/FileHelper.hpp>
 #include <glm/glm.hpp>
 #include "ViewFrustum.h"
 
@@ -52,7 +53,6 @@ private:
 
     void windowViewRender(tygra::Window * window) override;
 
-
 	void GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV, int sizeU, int sizeV);
 
 	void SetupTerrainPatches(TerrainData& terrainData, int sizeU, int sizeV);
@@ -61,7 +61,7 @@ private:
 
 	void ApplyDisplacementMap(TerrainData& terrainData, const tygra::Image& displacementMap);
 
-	void ApplyBrownianNoiseToMap(TerrainData& terrainData, int gain, int octaves);
+	void ApplyBrownianNoiseToMap(TerrainData& terrainData, int gain, int octaves, float lacunarity);
 
 	void ApplyKenPerlin(TerrainData& terrainData);
 
@@ -73,13 +73,13 @@ private:
 
 	void ComputeNormals(TerrainData& data);
 
-	float PerlinNoise(int x, int y);
+	float PerlinNoise(int x, int y) const;
 	
-	float FractionalBrownian(float x, float y, float gain, int octaves, int hgrid);
+	float FractionalBrownian(float x, float y, float gain, int octaves, int hgrid, float lacunarity) const;
 
-	float CosineLerp(float a, float b, float x);
+	float CosineLerp(float a, float b, float x) const;
 
-	float KenPerlin(float xPos, float zPos);
+	float KenPerlin(float xPos, float zPos) const;
 private:
 
     const scene::Context * scene_{ nullptr };
@@ -88,7 +88,8 @@ private:
 
     bool shade_normals_{ false };
 
-	TerrainData MyTerrain;
+	TerrainData m_terrainData;
+	ViewFrustum m_frustum;
 
     struct MeshGL
     {
