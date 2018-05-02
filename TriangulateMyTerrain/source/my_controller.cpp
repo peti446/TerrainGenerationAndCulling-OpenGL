@@ -20,8 +20,8 @@ void MyController::windowControlWillStart(tygra::Window * window)
     std::cout << "  F2: Toggle shading mode" << std::endl;
     std::cout << "  F3: Reduce camera movement speed" << std::endl;
     std::cout << "  F4: Increase camera movement speed" << std::endl;
-	std::cout << "	F5: Do a performance querry" << std::endl;
-	std::cout << "	F6: Toggle Paches rendering information" << std::endl;
+	std::cout << "  F5: Do a performance querry" << std::endl;
+	std::cout << "  F6: Toggle Paches rendering information" << std::endl;
 }
 
 void MyController::windowControlDidStop(tygra::Window * window)
