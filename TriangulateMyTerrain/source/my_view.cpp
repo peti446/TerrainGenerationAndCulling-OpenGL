@@ -121,7 +121,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 
 #pragma region Create Terrain and apply effects to it
 	//First lets generate a grid with the same resolution as the image
-	GenerateTesselatedGrid(m_terrainData, displace_image.width(), displace_image.height(), sizeX, sizeZ);
+	GenerateTesselatedGrid(m_terrainData, (int)displace_image.width(), (int)displace_image.height(), (int)sizeX, (int)sizeZ);
 	//Then we apply the bezier to the terrain, afterwards we compute the normals
 	ApplyBezierSurface(m_terrainData, bezier_patches);
 	//We apply then the dislacement map upon the terrain in its new state (with the bezier applied to it) , afterwards we compute the normals
@@ -129,7 +129,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 	//Then we apply some noise to it (We are using here Brownian noise but I got the KenPerlin function too that could be used), , afterwards we compute the normals
 	ApplyBrownianNoiseToMap(m_terrainData, 0.5f, 8, 2.0f);
 	//The last step is splitting up the terrain in patches, we are using 16 by 16 paches in this instance
-	SetupTerrainPatches(m_terrainData, 16, 16);
+	SetupTerrainPatches(m_terrainData, 8, 8);
 #pragma endregion
 
 #pragma region Creation of the VAO
@@ -140,7 +140,7 @@ void MyView::windowViewWillStart(tygra::Window * window)
 		m_terrainData.elementArray.size() * sizeof(GLuint),
 		m_terrainData.elementArray.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    terrain_mesh_.element_count = m_terrainData.elementArray.size();
+    terrain_mesh_.element_count = (int)m_terrainData.elementArray.size();
 
     glGenBuffers(1, &terrain_mesh_.position_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, terrain_mesh_.position_vbo);
@@ -207,7 +207,7 @@ void MyView::windowViewRender(tygra::Window * window)
 			GLuint querry_result;
 			glGetQueryObjectuiv(m_querryID[0], GL_QUERY_RESULT, &querry_result);
 			//Output the information
-			std::cout << "QuerryResult:" << std::endl << "Draw time (microsecs): " << (querry_result / 1000) << std::endl;
+			std::cout << "QuerryResult:" << std::endl << "Draw time (microsecs): " << ((float)querry_result / 1000.0f) << std::endl;
 			//Clean up the querry
 			glDeleteQueries(1, &m_querryID[0]);
 			m_querryID[0] = 0;
@@ -364,8 +364,8 @@ void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV
 	float halfX = 0.5f*sizeU;
 	float halfZ = 0.5f*sizeV;
 
-	float dx = sizeU / (subU - 1);
-	float dz = sizeV / (subV - 1);
+	float dx = (float)sizeU / ((float)subU - 1.0f);
+	float dz = (float)sizeV / ((float)subV - 1.0f);
 
 	//For speed to use multiplication in the for loop
 	float oneOverSizeU = 1.0f / (float)(subU-1);
@@ -378,11 +378,11 @@ void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV
 	//Generate the grid
 	for(int z = 0; z < subV; z++)
 	{
-		int zPos = halfZ -  z * dz;
+		float zPos = halfZ -  z * dz;
 		float v = z * oneOverSizeV;
 		for(int x = 0; x < subU; x++)
 		{
-			int xPos = -halfX + x*dx;
+			float xPos = -halfX + x*dx;
 			float u = x * oneOverSizeU;
 			terrainData.vertecies[z * subU + x] = (glm::vec3(xPos, 0, zPos));
 			terrainData.normals[z * subU + x] = (glm::vec3(0,1,0));
@@ -506,7 +506,7 @@ void MyView::SetupTerrainPatches(TerrainData& terrainData, int patchSizeU, int p
 			//Create a terrain patch
 			TerrainPatch p;
 			//element array size (Im using this as it might chhange but in this case i did not)
-			p.elementAmount = terrainData.elementArray.size();
+			p.elementAmount = (GLuint)terrainData.elementArray.size();
 			//Calculate the offset to later drawn them
 			p.elementOffset = (x * (patchSizeU-1)) + (z * ((patchSizeV-1) * ((patchSizeU) * patchAmountU)));
 
@@ -581,8 +581,8 @@ void MyView::ApplyDisplacementMap(TerrainData& terrainData, const tygra::Image& 
 	const float DesplacementMapScalar = 300.0f;
 
 	//Precomputed variables so we dont need to calculate it for every vertex
-	int widthCeroBased = displacementMap.width() - 1;
-	int heightCeroBased = displacementMap.height() - 1;
+	size_t widthCeroBased = displacementMap.width() - 1;
+	size_t heightCeroBased = displacementMap.height() - 1;
 	float oneOver255 = 1.0f / 255.0f;
 
 	//Apply the noise to every vertex of the terrain
@@ -591,7 +591,7 @@ void MyView::ApplyDisplacementMap(TerrainData& terrainData, const tygra::Image& 
 		//Apply the pixel displacement on the normal
 		terrainData.vertecies[i] += terrainData.normals[i]
 								  * DesplacementMapScalar
-								  * ((float)(*(uint8_t*)displacementMap.pixel(terrainData.UVCorrd[i].x * widthCeroBased, terrainData.UVCorrd[i].y * heightCeroBased)))
+								  * ((float)(*(uint8_t*)displacementMap.pixel((size_t)(terrainData.UVCorrd[i].x * widthCeroBased), (size_t)(terrainData.UVCorrd[i].y * heightCeroBased))))
 								  * oneOver255;
 	}
 
@@ -620,7 +620,7 @@ void MyView::ApplyKenPerlin(TerrainData & terrainData)
 	for (int i = 0; i < terrainData.vertecies.size(); i++)
 	{
 		//Make KenPerlin noice to the range 0-1 as by default it returns it from -1 to 1;
-		float noise = 0.5 + 0.5 * KenPerlin(terrainData.vertecies[i].x, terrainData.vertecies[i].z);
+		float noise = 0.5f + 0.5f * KenPerlin(terrainData.vertecies[i].x, terrainData.vertecies[i].z);
 		//Multiply the noise value by the scalar and then the result by the normal and add it to the vertex position
 		terrainData.vertecies[i] += terrainData.normals[i] * (noise * NoiseScalar);
 	}
@@ -698,7 +698,7 @@ float MyView::FractionalBrownian(float x, float y, float gain, int octaves, int 
 	//Total is the height value
 	float total = 0.0f;
 	//Starting frequency, decreased each octave by the amount specified lacunarity
-	float frequency = 1.0 / (float)hgrid;
+	float frequency = 1.0f / (float)hgrid;
 	//Amplitude starts as gain, and each octave it is multiplied by the gain
 	float amplitude = gain;
 
@@ -722,7 +722,7 @@ float MyView::PerlinNoise(int x, int y) const
 	int n = x + y * 57;
 	n = (n << 13) ^ n;
 	int nn = ((n*((n*n * 15731) + 789221) + 1376312589) & 0x7fffffff);
-	return 1.0 - ((float)nn / 1073741824.0f);
+	return 1.0f - ((float)nn / 1073741824.0f);
 }
 
 float MyView::CosineLerp(float a, float b, float x) const
