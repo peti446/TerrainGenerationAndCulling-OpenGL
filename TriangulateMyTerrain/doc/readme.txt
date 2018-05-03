@@ -1,5 +1,7 @@
 Triangulate My Terrain
 
+By: Petric Marcinkowski (d6073335)
+
 Original tutorial framework developed by Tyrone Davison <t.p.davison@tees.ac.uk>
 
 TGL and TYGrA

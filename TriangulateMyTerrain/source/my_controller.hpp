@@ -51,7 +51,7 @@ private:
     std::unique_ptr<MyView> view_;
     std::unique_ptr<scene::Context> scene_;
 
-    float camera_speed_{ 100.f };
+    float camera_speed_{ 1000.f };
     bool camera_turn_mode_{ false };
     float camera_move_speed_[4]{ 0.f, 0.f, 0.f, 0.f };
     float camera_rotate_speed_[2]{ 0.f, 0.f };

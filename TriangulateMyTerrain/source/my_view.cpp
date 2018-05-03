@@ -364,43 +364,45 @@ void MyView::GenerateTesselatedGrid(TerrainData& terrainData, int subU, int subV
 	float halfX = 0.5f*sizeU;
 	float halfZ = 0.5f*sizeV;
 
-	float dx = (float)sizeU / ((float)subU - 1.0f);
-	float dz = (float)sizeV / ((float)subV - 1.0f);
+	float dx = (float)sizeU / ((float)subU);
+	float dz = (float)sizeV / ((float)subV);
 
 	//For speed to use multiplication in the for loop
-	float oneOverSizeU = 1.0f / (float)(subU-1);
-	float oneOverSizeV = 1.0f / (float)(subV-1);
+	float oneOverSizeU = 1.0f / (float)(subU);
+	float oneOverSizeV = 1.0f / (float)(subV);
 
 	//Allocate memory for the vectors containing the terrain data
-	terrainData.vertecies.resize(subU*subV);
-	terrainData.normals.resize(subU*subV);
-	terrainData.UVCorrd.resize(subU*subV);
+	terrainData.vertecies.resize((subU+1)*(subV+1));
+	terrainData.normals.resize((subU + 1)*(subV + 1));
+	terrainData.UVCorrd.resize((subU + 1)*(subV + 1));
+
+	int VerteciesAmountX = subU + 1;
 	//Generate the grid
-	for(int z = 0; z < subV; z++)
+	for(int z = 0; z <= subV; z++)
 	{
 		float zPos = halfZ -  z * dz;
 		float v = z * oneOverSizeV;
-		for(int x = 0; x < subU; x++)
+		for(int x = 0; x <= subU; x++)
 		{
 			float xPos = -halfX + x*dx;
 			float u = x * oneOverSizeU;
-			terrainData.vertecies[z * subU + x] = (glm::vec3(xPos, 0, zPos));
-			terrainData.normals[z * subU + x] = (glm::vec3(0,1,0));
-			terrainData.UVCorrd[z * subU + x] = (glm::vec2(u,v));
+			terrainData.vertecies[z * VerteciesAmountX + x] = (glm::vec3(xPos, 0, zPos));
+			terrainData.normals[z * VerteciesAmountX + x] = (glm::vec3(0,1,0));
+			terrainData.UVCorrd[z * VerteciesAmountX + x] = (glm::vec2(u,v));
 		}
 
 	}
 
 	//Alocate memory for the elements vector
-	terrainData.elementArray.reserve((subU-1)*(subV-1)*6);
+	terrainData.elementArray.reserve((subU)*(subV)*6);
 	//Generate triangles indecies for the grid
-	for(int z = 0; z < subV-1; z++)
+	for(int z = 0; z < subV; z++)
 	{
-		for (int x = 0; x < subU - 1; x++)
+		for (int x = 0; x < subU ; x++)
 		{
 			//Calulations of rows
-			int row1 = z * subU + x;
-			int row2 = (z + 1) * subU + x;
+			int row1 = z * VerteciesAmountX + x;
+			int row2 = (z + 1) * VerteciesAmountX + x;
 
 			//To obtain a diamond shape like pattern we need to check the x and Z position of the current quad.
 			//And then check if both are either divisible by 2 or not, to make the triangles in the other way
@@ -457,13 +459,13 @@ void MyView::SetupTerrainPatches(TerrainData& terrainData, int patchSizeU, int p
 	//Reserve memory for the element array
 	terrainData.elementArray.reserve((patchSizeU-1)*(patchSizeV-1)*6);
 	//Generate the new infex data for the current patch
-	for (int z = 0; z < patchSizeV-1; z++)
+	for (int z = 0; z < patchSizeV; z++)
 	{
-		for (int x = 0; x < patchSizeU-1; x++)
+		for (int x = 0; x < patchSizeU; x++)
 		{
 			//Calulations of rows
-			int row1 = z * terrainData.subU + x;
-			int row2 = (z + 1) * terrainData.subU + x;
+			int row1 = z * (terrainData.subU+1) + x;
+			int row2 = (z + 1) * (terrainData.subU+1) + x;
 
 			//To obtain a diamond shape like pattern we need to check the x and Z position of the current quad.
 			//And then check if both are either divisible by 2 or not, to make the triangles in the other way
@@ -508,7 +510,7 @@ void MyView::SetupTerrainPatches(TerrainData& terrainData, int patchSizeU, int p
 			//element array size (Im using this as it might chhange but in this case i did not)
 			p.elementAmount = (GLuint)terrainData.elementArray.size();
 			//Calculate the offset to later drawn them
-			p.elementOffset = (x * (patchSizeU-1)) + (z * ((patchSizeV-1) * ((patchSizeU) * patchAmountU)));
+			p.elementOffset = (x * (patchSizeU)) + (z * ((patchSizeV) * (terrainData.subU+1)));
 
 			//Generate the Axis Aligned Box
 			ViewFrustum::AAB box;
